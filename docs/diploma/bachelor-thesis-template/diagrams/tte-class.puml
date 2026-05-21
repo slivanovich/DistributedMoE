@@ -1,0 +1,90 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 16
+skinparam dpi 180
+skinparam linetype ortho
+skinparam nodesep 44
+skinparam ranksep 38
+hide circle
+
+top to bottom direction
+
+abstract class "TensorTransferEngine" as TTE #E6ECFF {
+    metadata_p2p_pairs
+    done_transfers
+    transfer_engine
+    --
+    handshake()
+    {abstract} handshake_with_remote(...)
+    {abstract} register_batch(...)
+    {abstract} deregister_batch(...)
+    {abstract} serialize_descs(...)
+    {abstract} deserialize_descs(...)
+    async_send_metadata_to(...)
+    async_get_metadata_from(...)
+    {abstract} read_batch_transfer(...)
+    {abstract} write_batch_transfer(...)
+    wait_for_transfer_efficient(...)
+}
+
+class "NIXLTensorTransferEngine" as NIXL #F8F8F8 {
+    handshake_with_remote(...)
+    register_batch(...)
+    deregister_batch(...)
+    serialize_descs(...)
+    deserialize_descs(...)
+    read_batch_transfer(...)
+    write_batch_transfer(...)
+}
+
+class "MCTETensorTransferEngine" as MCTE #F8F8F8 {
+    handshake_with_remote(...)
+    register_batch(...)
+    deregister_batch(...)
+    serialize_descs(...)
+    deserialize_descs(...)
+    read_batch_transfer(...)
+    write_batch_transfer(...)
+}
+
+class "TensorTransferEngineConfig" as Config #F8F8F8 {
+    host_address
+    host_port
+    remote_addresses
+    remote_ports
+    transfer_protocol
+    handshake_type
+}
+
+class "P2PPair" as P2PPair #F8F8F8 {
+    pusher
+    puller
+}
+
+class "Transfer" as Transfer #F8F8F8 {
+    name
+    status
+    size
+    duration
+}
+
+class "Buffer" as Buffer #F8F8F8 {
+    data
+    transfer_descs
+    register_descs
+    --
+    read_from(...)
+    write_to(...)
+}
+
+TTE <|-- NIXL
+TTE <|-- MCTE
+TTE ..> Config
+TTE o-- "0..N" P2PPair
+TTE o-- "0..*" Transfer
+Buffer ..> TTE
+
+@enduml

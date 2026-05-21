@@ -1,0 +1,36 @@
+# Log files
+logs/
+*.log
+*.nsys-rep
+
+# Data and test files
+SAFE/
+src/python/logs/
+
+# System files
+.DS_Store
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Documentation (if not needed in container)
+docs/
+
+# Debug files
+debug-dockerfile

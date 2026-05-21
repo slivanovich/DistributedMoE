@@ -1,0 +1,14 @@
+.venv*
+.cache
+.vscode
+*.csv
+__*
+docker_profile.json
+*data*
+SAFE/*
+*.nsys-rep
+*logs*
+DeepEP/*
+gdrcopy/*
+*.log
+.DS_Store

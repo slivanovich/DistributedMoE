@@ -1,0 +1,47 @@
+\documentclass{includes/Thesis}
+
+\addbibresource{parts/refs.bib}
+
+\begin{document}
+
+\begin{thesis}[
+    title = Отказоустойчивый инференс Large Scale MoE моделей,
+    year = 2026,
+    city = Санкт-Петербург,
+    %
+    authorGroup = {БПМ221С},
+    authorName = {Кураленок Святослав Игоревич},
+    %
+    educationalProgram = {01.03.02 Прикладная математика и информатика},
+    educationalProgramName = {Прикладная математика и информатика},
+    thesisKind = {БАКАЛАВРСКАЯ РАБОТА},
+    %
+    academicTeacherTitle = {доцент департамента информатики},
+    academicTeacherName = {Овчинников Андрей Анатольевич},
+    %
+    hasAcademicCoteacher,
+    academicCoteacherTitle = {к.\,ф.-м.\,н., руководитель подразделения <<AI Studio Tech>>\\ООО <<Яндекс.Технологии>>},
+    academicCoteacherName = {Ершов Василий Алексеевич},
+    %
+    isAcademic,
+    UDC = 004.272.2,
+    %
+    keywordsRu = большие языковые модели; инференс; Mixture-of-Experts; MoE; клиент-серверная архитектура; отказоустойчивость; балансировка нагрузки; распределенные вычисления; GPU,
+    keywordsEn = large language models; inference; Mixture-of-Experts; MoE; client-server architecture; fault tolerance; load balancing; distributed computing; GPU,
+]
+
+    \setAbstractResource{parts/abstract-ru}{parts/abstract-en}
+
+    \setTerminologyResource{parts/terminology}
+
+    \setIntroResource{parts/intro}
+
+    \addChapter{Обзор литературы}{parts/chapter1}
+    \addChapter{Метод}{parts/chapter2}
+    \addChapter{Эксперименты}{parts/chapter3}
+
+    \setConclusionResource{parts/conclusion}
+
+\end{thesis}
+
+\end{document}

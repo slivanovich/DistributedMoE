@@ -1,0 +1,65 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Times New Roman"
+skinparam dpi 180
+skinparam ArrowThickness 1.4
+hide footbox
+skinparam sequence {
+    ArrowColor #444444
+    LifeLineBorderColor #777777
+    LifeLineBackgroundColor #F7F7F7
+    ParticipantBorderColor #444444
+    ParticipantBackgroundColor #F2F2F2
+    ParticipantPadding 12
+    BoxPadding 8
+}
+
+box "Серверная часть" #F2F2F2
+participant "DistMoEBlock" as Server
+participant "HostPipelineTask" as HostTask
+participant "ExpertBlocksPool" as Pool
+participant "TTE" as HostTTE
+end box
+
+box "Клиентская часть" #E8F7E8
+participant "TTE" as ClientTTE
+participant "DistExpertsBlock" as Client
+participant "ExpertsBlockPipelineTask" as ExpertTask
+end box
+
+activate Server
+Server -> Server : метаданные по экспертам
+Server -> HostTask : создать задачу
+activate HostTask
+HostTask -> Pool : acquire()
+Pool --> HostTask : экспертный блок
+HostTask -> HostTask : пакет метаданных
+HostTask -> HostTask : запись активаций
+HostTask -> HostTTE : DispatchSubmit
+HostTTE -> HostTTE : сериализация
+HostTTE -> ClientTTE : DispatchSubmit
+
+ClientTTE -> ClientTTE : десериализация
+ClientTTE -> Client : метаданные
+Client -> ExpertTask : создать задачу
+activate ExpertTask
+ExpertTask -> ExpertTask : дескрипторы буферов
+ExpertTask -> ClientTTE : read batch
+HostTTE --> ClientTTE : чтение данных
+ClientTTE --> ExpertTask : чтение данных
+ExpertTask -> ExpertTask : экспертные вычисления
+ExpertTask -> ClientTTE : write batch
+ClientTTE --> HostTTE : запись данных
+ExpertTask -> ClientTTE : HostOutputBufferUnlocked
+ClientTTE -> ClientTTE : сериализация
+deactivate ExpertTask
+
+ClientTTE -> HostTTE : HostOutputBufferUnlocked
+HostTTE -> HostTTE : десериализация
+HostTTE -> Server : HostOutputBufferUnlocked
+Server -> HostTask : combine()
+deactivate HostTask
+
+deactivate Server
+@enduml

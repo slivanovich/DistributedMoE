@@ -1,0 +1,51 @@
+@startuml
+title Client Activity Diagram
+
+skinparam shadowing false
+skinparam activityStyle rounded
+
+start
+
+partition "Client (DistExpertsBlock)" {
+  group Initialization
+    :init(experts_block_index, config,\nexpert_layers, tte_config);
+    :create TensorTransferEngine\n(MCTE or NIXL);
+    :setup_health_check();
+    :initialize_io_buffers();
+    :handshake();
+  end group
+
+  group Main Loop
+    :async_main_loop();
+    while (EOR == False) is (running)
+      :receive P2P metadata;
+      if (header == IOTransferDescriptorsSubmit) then (yes)
+        :deserialize + store host IO\ntransfer descriptors;
+      elseif (header == DispatchSubmit) then (yes)
+        :create ExpertsBlockPipelineTask;
+        :READ input buffer via TTE;
+
+        if (using_grouped_gemm) then (yes)
+          :compute with grouped_mm kernels;
+        else (no)
+          :compute as is, per-expert;
+        endif
+
+        :WRITE output buffer via TTE;
+        :send HostOutputBufferUnlocked;
+      elseif (header == ExpertsBlockStop) then (stop)
+        :set EOR=True;
+      else (timeout/other)
+        :ignore / retry;
+      endif
+    endwhile (stopped)
+  end group
+
+  group Shutdown
+    :close();
+  end group
+}
+
+stop
+@enduml
+

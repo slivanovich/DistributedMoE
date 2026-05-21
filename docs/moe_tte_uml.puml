@@ -1,0 +1,213 @@
+@startuml
+title Class Diagram
+
+set namespaceSeparator ::
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+
+' Invisible spacer class styling (used to force extra horizontal gaps)
+skinparam classBorderColor<<spacer>> transparent
+skinparam classBackgroundColor<<spacer>> transparent
+skinparam classFontColor<<spacer>> transparent
+
+left to right direction
+
+package "Server" {
+  class DistMoEBlock <<nn.Module>> {
+    -tensor_transfer_engine
+    -expert_blocks_pool
+    -input_buffers_pool
+    -output_buffers_pool
+    ..
+    +__init__(config, tte_config, metrics_collector=None)
+    +setup_health_check(tte_config)
+    +initialize_io_buffers()
+    +disable_experts_block(experts_block_index)
+    +enable_experts_block(experts_block_index)
+  }
+
+  class HostPipelineTask {
+    ..
+    +dispatch(input_batch, ...)
+    +combine(active_pipeline_tasks, output_batch, combining)
+    +abort()
+    +close()
+  }
+}
+
+package "Client" {
+  class DistExpertsBlock <<nn.Module>> {
+    -tensor_transfer_engine
+    -input_buffers_pool
+    -output_buffers_pool
+    ..
+    +__init__(experts_block_index, config, expert_layers, tte_config, metrics_collector=None)
+    +setup_health_check(config, tte_config)
+    +initialize_io_buffers()
+    +parse_host_io_buffer_descriptors(metadata)
+    +async_main_loop()
+  }
+
+  class ExpertsBlockPipelineTask {
+    ..
+    +run(experts_block_index, host_input_buffers_transfer_descs, host_output_buffers_transfer_descs)
+  }
+}
+
+package "pools" {
+  class Buffer {
+    +id
+    ..
+    +read_from(remote_name, src_buffer_transfer_descs)
+    +write_to(remote_name, dst_buffer_transfer_descs)
+    +close()
+  }
+
+  class BuffersPool {
+    ..
+    +acquire()
+    +release(buffer_index)
+    +close()
+  }
+
+  class ExpertBlockMetaData <<dataclass>> {
+    +is_alive
+    +alive_event
+    +experts_block_index
+    +expert_indexes
+  }
+
+  class ExpertBlocksPool {
+    ..
+    +aquire()
+    +release(experts_block_index)
+    +mark_alive(experts_block_index)
+    +mark_dead(experts_block_index)
+    +close()
+  }
+}
+
+' Shared runtime types (used by both Server and Client)
+class ExpertMetaData <<dataclass>> {
+  +expert_token_indexes
+  +expert_weights
+  +expert_offsets
+}
+
+class DistMoEBlockConfig <<dataclass>>
+
+class PipelineTask {
+  +name
+  -tensor_transfer_engine
+  -input_buffers_pool
+  -output_buffers_pool
+  ..
+  +release_input_buffer()
+  +release_output_buffer()
+  +close()
+}
+
+
+
+package "TensorTransferEngine" {
+  enum TensorTransferEngineBackend <<Enum>> {
+    NIXL
+    ..
+    MCTE
+  }
+
+  class TensorTransferEngineConfig <<dataclass>>
+
+  abstract class TensorTransferEngine <<abstract>> {
+    +handshake()
+    +register_batch(...)
+    +deregister_batch(...)
+    +read_batch_transfer(...)
+    +write_batch_transfer(...)
+    +serialize_descs(...)
+    +deserialize_descs(...)
+    +serialize_p2p_packet(header, body)
+    +deserialize_p2p_packet(packet)
+    +async_send_metadata_to(remote_name, header, body)
+    +async_get_metadata_from(remote_name)
+    +close()
+  }
+
+  class MCTETensorTransferEngine
+  class NIXLTensorTransferEngine
+
+  ' Layout hints: keep core TTE types arranged horizontally inside this package.
+  ' (PlantUML layout is global, so we use hidden links to stabilize ordering.)
+  TensorTransferEngineBackend -[hidden]-> TensorTransferEngineConfig
+  TensorTransferEngineConfig -[hidden]-> TensorTransferEngine
+  TensorTransferEngine -[hidden]-> MCTETensorTransferEngine
+  MCTETensorTransferEngine -[hidden]-> NIXLTensorTransferEngine
+}
+
+' -------------------- Relationships --------------------
+
+Server::DistMoEBlock ..> DistMoEBlockConfig
+Server::DistMoEBlock ..> TensorTransferEngine::TensorTransferEngineConfig
+Server::DistMoEBlock *-- ExpertBlocksPool
+Server::DistMoEBlock *-- BuffersPool
+Server::DistMoEBlock *-- BuffersPool
+Server::DistMoEBlock o-- Server::HostPipelineTask
+Server::DistMoEBlock --> TensorTransferEngine::TensorTransferEngine
+Server::DistMoEBlock --> ExpertMetaData
+
+Client::DistExpertsBlock ..> DistMoEBlockConfig
+Client::DistExpertsBlock ..> TensorTransferEngine::TensorTransferEngineConfig
+Client::DistExpertsBlock *-- BuffersPool
+Client::DistExpertsBlock *-- BuffersPool
+Client::DistExpertsBlock o-- Client::ExpertsBlockPipelineTask
+Client::DistExpertsBlock --> TensorTransferEngine::TensorTransferEngine
+
+PipelineTask <|-- Server::HostPipelineTask
+PipelineTask <|-- Client::ExpertsBlockPipelineTask
+PipelineTask --> TensorTransferEngine::TensorTransferEngine
+PipelineTask --> BuffersPool
+
+BuffersPool *-- Buffer
+Buffer --> TensorTransferEngine::TensorTransferEngine
+
+ExpertBlocksPool *-- ExpertBlockMetaData
+Server::HostPipelineTask --> ExpertBlocksPool
+Server::HostPipelineTask --> ExpertMetaData
+
+' Correct inheritance (implementations extend the abstract base)
+' (Direction like in the full diagram: concrete -> abstract)
+TensorTransferEngine::MCTETensorTransferEngine --|> TensorTransferEngine::TensorTransferEngine
+TensorTransferEngine::NIXLTensorTransferEngine --|> TensorTransferEngine::TensorTransferEngine
+
+' Implementation selection is a runtime decision driven by backend enum.
+DistMoEBlockConfig ..> TensorTransferEngine::TensorTransferEngineBackend
+
+' note right of DistMoEBlock
+' Host-side coordinator:
+' - routes activations to expert blocks
+' - allocates/owns IO buffers
+' - runs dispatch/combine pipeline
+' - performs health monitoring
+' end note
+
+' note right of DistExpertsBlock
+' Remote-side executor:
+' - receives dispatch metadata
+' - transfers IO via TTE
+' - executes experts and writes back results
+' - responds to health checks
+' end note
+
+' note bottom of TensorTransferEngine
+' TTE abstracts:
+' - P2P metadata channels (ZMQ)
+' - async transfer lifecycle
+' Concrete implementations bind:
+' - MoonCake TransferEngine
+' - NIXL (UCX) agent
+' end note
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam linetype ortho
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName "Times New Roman"
+skinparam dpi 180
+skinparam nodesep 42
+skinparam ranksep 38
+
+left to right direction
+
+package "Серверная часть" #F2F2F2 {
+    component "DistMoEBlock" as DMB
+    component "ExpertBlocksPool" as EBP
+    component "HostPipelineTask" as HPT
+    component "BuffersPool" as HBUF
+    component "TTE" as HTTE #E6ECFF
+}
+
+package "Клиентская часть" #E8F7E8 {
+    component "TTE" as CTTE #E6ECFF
+    component "DistExpertsBlock" as DEB
+    component "ExpertsBlockPipelineTask" as EBPT
+    component "BuffersPool" as CBUF
+}
+
+DMB ..> EBP
+DMB ..> HPT
+DMB ..> HBUF
+HPT ..> HBUF
+HPT ..> HTTE
+
+DEB ..> EBPT
+DEB ..> CBUF
+DEB ..> CTTE
+EBPT ..> CBUF
+EBPT ..> CTTE
+
+HTTE -- CTTE
+
+@enduml

@@ -1,0 +1,43 @@
+name: latexmk
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'includes/**'
+      - 'parts/**'
+      - 'main.tex'
+      - '.github/workflows/latexmk.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'includes/**'
+      - 'parts/**'
+      - 'main.tex'
+      - '.github/workflows/latexmk.yml'
+
+  workflow_dispatch:
+
+jobs:
+  build-example:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Set up repo
+        uses: actions/checkout@v3
+      - name: Configure TeXLive
+        run: |
+          sudo apt-get install texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra texlive-formats-extra texlive-lang-cyrillic texlive-bibtex-extra
+          sudo apt-get install biber
+          sudo apt-get install latexmk
+      - name: Generate PDF
+        run: latexmk -pdf main
+      - name: Commit PDF
+        if: github.ref == 'refs/heads/master'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add main.pdf
+          git commit -m "[CI] Rebuild example"
+          git push
+

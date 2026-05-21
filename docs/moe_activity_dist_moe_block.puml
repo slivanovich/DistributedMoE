@@ -1,0 +1,49 @@
+@startuml
+title Server Activity Diagram
+
+skinparam shadowing false
+skinparam activityStyle rounded
+
+start
+
+partition "Server (DistMoEBlock)" {
+  group Initialization
+    :init(config, tte_config);
+    :create TensorTransferEngine\n(MCTE or NIXL);
+    :setup_health_check();
+    :initialize_io_buffers();
+    :handshake();
+    :send IOTransferDescriptorsSubmit\n(broadcast);
+  end group
+
+  group Forward
+    repeat
+      :forward(input_batch);
+      :gate/top-k routing;
+      :prepare ExpertMetaData\n(token indexes, weights, offsets);
+
+      fork
+        :create HostPipelineTask;
+        :dispatch(): acquire input+output\nBuffers from pools;
+        :copy activations --> input Buffer;
+        :send DispatchSubmit\n(+ buffer IDs) --> remote;
+      fork again
+        :create HostPipelineTask (other EB);
+        :dispatch() concurrently;
+      end fork
+
+      :await HostOutputBufferUnlocked\n(per dispatched task);
+      :combine();
+      :release IO buffers --> BuffersPool;
+      :return output_batch;
+    repeat while (next input_batch?) is (yes)
+  end group
+
+  group Shutdown
+    :send ExpertsBlockStop;
+    :close();
+  end group
+}
+
+stop
+@enduml

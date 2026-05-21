@@ -1,0 +1,55 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 16
+skinparam dpi 180
+skinparam linetype ortho
+skinparam nodesep 44
+skinparam ranksep 40
+hide circle
+
+left to right direction
+
+class "DistExpertsBlock" as DistExpertsBlock #E8F7E8 {
+    expert_layers
+    host_buffer_descs
+    --
+    main_loop()
+    async_main_loop()
+    parse_host_io_buffer_descriptors(...)
+}
+
+class "ExpertsBlockPipelineTask" as ExpertTask #F8F8F8 {
+    metadata
+    host_address
+    --
+    run(...)
+}
+
+class "BuffersPool" as BuffersPool #F8F8F8 {
+    acquire()
+    release(index)
+    close()
+}
+
+class "TensorTransferEngine" as TTE #E6ECFF {
+    async_send_metadata_to(...)
+    async_get_metadata_from(...)
+    read_batch_transfer(...)
+    write_batch_transfer(...)
+}
+
+DistExpertsBlock -[hidden]right- ExpertTask
+BuffersPool -[hidden]right- TTE
+DistExpertsBlock -[hidden]down- BuffersPool
+ExpertTask -[hidden]down- TTE
+
+DistExpertsBlock ..> ExpertTask
+DistExpertsBlock o-- BuffersPool
+DistExpertsBlock o-- TTE
+ExpertTask --> BuffersPool
+ExpertTask --> TTE
+
+@enduml

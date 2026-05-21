@@ -1,0 +1,84 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 16
+skinparam dpi 180
+skinparam linetype ortho
+skinparam nodesep 44
+skinparam ranksep 38
+hide circle
+
+top to bottom direction
+
+class "DistMoEBlock" as DistMoEBlock #F2F2F2 {
+    gate
+    experts_metadata
+    pipeline_tasks
+    dispatch_tasks
+    combine_tasks
+    --
+    forward(input_batch)
+    async_forward(input_batch)
+    dispatch(input_batch, n)
+}
+
+class "DistMoEBlockConfig" as Config #F8F8F8 {
+    backend
+    number_of_experts
+    expert_blocks
+    number_of_io_buffers
+    io_buffer_size
+    top_k
+    hidden_features
+}
+
+class "ExpertMetaData" as ExpertMetaData #F8F8F8 {
+    block_indexes
+    expert_weights
+    expert_token_indexes
+    expert_offsets
+}
+
+class "ExpertBlocksPool" as ExpertBlocksPool #F8F8F8 {
+    acquire()
+    release(index)
+    mark_alive(index)
+    mark_dead(index)
+}
+
+class "HostPipelineTask" as HostPipelineTask #F8F8F8 {
+    experts_metadata_snapshot
+    input_buffer
+    output_buffer
+    --
+    dispatch(...)
+    combine(...)
+    abort()
+}
+
+class "BuffersPool" as BuffersPool #F8F8F8 {
+    acquire()
+    release(index)
+    close()
+}
+
+class "TensorTransferEngine" as TTE #E6ECFF {
+    async_send_metadata_to(...)
+    async_get_metadata_from(...)
+    read_batch_transfer(...)
+    write_batch_transfer(...)
+}
+
+DistMoEBlock ..> Config
+DistMoEBlock o-- ExpertMetaData
+DistMoEBlock o-- ExpertBlocksPool
+DistMoEBlock o-- BuffersPool
+DistMoEBlock o-- TTE
+DistMoEBlock ..> HostPipelineTask
+HostPipelineTask --> ExpertBlocksPool
+HostPipelineTask --> BuffersPool
+HostPipelineTask --> TTE
+
+@enduml
