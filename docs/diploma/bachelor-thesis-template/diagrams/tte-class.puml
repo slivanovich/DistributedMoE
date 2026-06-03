@@ -6,8 +6,8 @@ skinparam defaultFontName "Times New Roman"
 skinparam defaultFontSize 16
 skinparam dpi 180
 skinparam linetype ortho
-skinparam nodesep 44
-skinparam ranksep 38
+skinparam nodesep 28
+skinparam ranksep 32
 hide circle
 
 top to bottom direction
@@ -86,5 +86,10 @@ TTE ..> Config
 TTE o-- "0..N" P2PPair
 TTE o-- "0..*" Transfer
 Buffer ..> TTE
+
+Buffer -[hidden]right- TTE
+NIXL -[hidden]right- MCTE
+Config -[hidden]down- P2PPair
+P2PPair -[hidden]right- Transfer
 
 @enduml
