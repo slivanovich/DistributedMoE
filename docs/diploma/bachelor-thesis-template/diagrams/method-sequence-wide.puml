@@ -1,85 +1,102 @@
 @startuml
+scale 0.453338
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 32
 skinparam dpi 180
-skinparam ArrowThickness 1.4
-skinparam BoxPadding 28
+skinparam ArrowThickness 2
+skinparam BoxPadding 8
 hide footbox
 skinparam sequence {
     ArrowColor #444444
+    ArrowFontSize 32
     LifeLineBorderColor #777777
     LifeLineBackgroundColor #F7F7F7
     ParticipantBorderColor #444444
     ParticipantBackgroundColor #F2F2F2
-    ParticipantPadding 12
-    BoxPadding 28
+    ParticipantFontSize 30
+    ParticipantPadding 4
+    BoxFontSize 32
+    BoxPadding 8
 }
-skinparam participant<<ServerSpacer>> {
+skinparam participant<<ServerEdgeSpacer>> {
     BackgroundColor #F2F2F2
     BorderColor #F2F2F2
     FontColor #F2F2F2
+    FontSize 18
+    Padding 2
 }
-skinparam participant<<ClientSpacer>> {
+skinparam participant<<ServerGapSpacer>> {
+    BackgroundColor #F2F2F2
+    BorderColor #F2F2F2
+    FontColor #F2F2F2
+    FontSize 10
+    Padding 0
+}
+skinparam participant<<ClientEdgeSpacer>> {
     BackgroundColor #E8F7E8
     BorderColor #E8F7E8
     FontColor #E8F7E8
+    FontSize 18
+    Padding 2
 }
-skinparam sequenceLifeLineBorderColor<<ServerSpacer>> #F2F2F2
-skinparam sequenceLifeLineBackgroundColor<<ServerSpacer>> #F2F2F2
-skinparam sequenceLifeLineBorderColor<<ClientSpacer>> #E8F7E8
-skinparam sequenceLifeLineBackgroundColor<<ClientSpacer>> #E8F7E8
+skinparam participant<<ClientGapSpacer>> {
+    BackgroundColor #E8F7E8
+    BorderColor #E8F7E8
+    FontColor #E8F7E8
+    FontSize 10
+    Padding 0
+}
+skinparam sequenceLifeLineBorderColor<<ServerEdgeSpacer>> #F2F2F2
+skinparam sequenceLifeLineBackgroundColor<<ServerEdgeSpacer>> #F2F2F2
+skinparam sequenceLifeLineBorderColor<<ServerGapSpacer>> #F2F2F2
+skinparam sequenceLifeLineBackgroundColor<<ServerGapSpacer>> #F2F2F2
+skinparam sequenceLifeLineBorderColor<<ClientEdgeSpacer>> #E8F7E8
+skinparam sequenceLifeLineBackgroundColor<<ClientEdgeSpacer>> #E8F7E8
+skinparam sequenceLifeLineBorderColor<<ClientGapSpacer>> #E8F7E8
+skinparam sequenceLifeLineBackgroundColor<<ClientGapSpacer>> #E8F7E8
 
 box "Серверная часть" #F2F2F2
+participant "x" as ServerLeft <<ServerEdgeSpacer>>
 participant "DistMoEBlock" as Server
-participant " " as Gap1 <<ServerSpacer>>
+participant "x" as ServerGap1 <<ServerGapSpacer>>
 participant "HostPipelineTask" as HostTask
-participant " " as Gap2 <<ServerSpacer>>
-participant "ExpertBlocksPool" as Pool
-participant " " as Gap3 <<ServerSpacer>>
-participant "TTE" as HostTTE
+participant "x" as ServerGap2 <<ServerGapSpacer>>
+participant "TensorTransferEngine" as HostTTE
+participant "x" as ServerRight <<ServerEdgeSpacer>>
 end box
 
 box "Клиентская часть" #E8F7E8
-participant "TTE" as ClientTTE
-participant " " as Gap4 <<ClientSpacer>>
+participant "x" as ClientLeft <<ClientEdgeSpacer>>
+participant "TensorTransferEngine" as ClientTTE
+participant "x" as ClientGap1 <<ClientGapSpacer>>
 participant "DistExpertsBlock" as Client
-participant " " as Gap5 <<ClientSpacer>>
+participant "x" as ClientGap2 <<ClientGapSpacer>>
 participant "ExpertsBlockPipelineTask" as ExpertTask
+participant "x" as ClientRight <<ClientEdgeSpacer>>
 end box
 
-activate Server
-Server -> Server : метаданные по экспертам
 Server -> HostTask : создать задачу
 activate HostTask
-HostTask -> Pool : acquire()
-Pool --> HostTask : экспертный блок
-HostTask -> HostTask : пакет метаданных
-HostTask -> HostTask : запись активаций
-HostTask -> HostTTE : DispatchSubmit
-HostTTE -> HostTTE : сериализация
-HostTTE -> ClientTTE : DispatchSubmit
+HostTask -> HostTask : подготовка пакета\nметаданных
+HostTask -> HostTTE : dispatch
+HostTTE -> ClientTTE : dispatch
 
-ClientTTE -> ClientTTE : десериализация
 ClientTTE -> Client : метаданные
 Client -> ExpertTask : создать задачу
 activate ExpertTask
-ExpertTask -> ExpertTask : дескрипторы буферов
-ExpertTask -> ClientTTE : read batch
+ExpertTask -> ClientTTE : чтение данных
 HostTTE --> ClientTTE : чтение данных
-ClientTTE --> ExpertTask : чтение данных
-ExpertTask -> ExpertTask : экспертные вычисления
-ExpertTask -> ClientTTE : write batch
+ExpertTask -> ExpertTask : экспертные\nвычисления
+ExpertTask -> ClientTTE : запись данных
 ClientTTE --> HostTTE : запись данных
-ExpertTask -> ClientTTE : HostOutputBufferUnlocked
-ClientTTE -> ClientTTE : сериализация
+ExpertTask -> ClientTTE : completed
 deactivate ExpertTask
 
-ClientTTE -> HostTTE : HostOutputBufferUnlocked
-HostTTE -> HostTTE : десериализация
-HostTTE -> Server : HostOutputBufferUnlocked
+ClientTTE -> HostTTE : completed
+HostTTE -> Server : completed
 Server -> HostTask : combine()
 deactivate HostTask
 
-deactivate Server
 @enduml

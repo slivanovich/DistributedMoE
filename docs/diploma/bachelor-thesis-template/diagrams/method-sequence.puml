@@ -1,63 +1,70 @@
 @startuml
+scale 0.62
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 14
 skinparam dpi 180
 skinparam ArrowThickness 1.4
 hide footbox
 skinparam sequence {
     ArrowColor #444444
+    ArrowFontSize 15
     LifeLineBorderColor #777777
     LifeLineBackgroundColor #F7F7F7
     ParticipantBorderColor #444444
     ParticipantBackgroundColor #F2F2F2
-    ParticipantPadding 12
-    BoxPadding 8
+    ParticipantPadding 2
+    BoxPadding 2
 }
+skinparam participant<<ServerSpacer>> {
+    BackgroundColor #F2F2F2
+    BorderColor #F2F2F2
+    FontColor #F2F2F2
+}
+skinparam participant<<ClientSpacer>> {
+    BackgroundColor #E8F7E8
+    BorderColor #E8F7E8
+    FontColor #E8F7E8
+}
+skinparam sequenceLifeLineBorderColor<<ServerSpacer>> #F2F2F2
+skinparam sequenceLifeLineBackgroundColor<<ServerSpacer>> #F2F2F2
+skinparam sequenceLifeLineBorderColor<<ClientSpacer>> #E8F7E8
+skinparam sequenceLifeLineBackgroundColor<<ClientSpacer>> #E8F7E8
 
 box "Серверная часть" #F2F2F2
 participant "DistMoEBlock" as Server
 participant "HostPipelineTask" as HostTask
-participant "ExpertBlocksPool" as Pool
-participant "TTE" as HostTTE
+participant "TensorTransferEngine" as HostTTE
 end box
 
 box "Клиентская часть" #E8F7E8
-participant "TTE" as ClientTTE
+participant "TensorTransferEngine" as ClientTTE
 participant "DistExpertsBlock" as Client
 participant "ExpertsBlockPipelineTask" as ExpertTask
 end box
 
 activate Server
-Server -> Server : метаданные по экспертам
 Server -> HostTask : создать задачу
 activate HostTask
-HostTask -> Pool : acquire()
-Pool --> HostTask : экспертный блок
-HostTask -> HostTask : пакет метаданных
-HostTask -> HostTask : запись активаций
+HostTask -> HostTask : подготовка пакета\nметаданных
 HostTask -> HostTTE : DispatchSubmit
-HostTTE -> HostTTE : сериализация
 HostTTE -> ClientTTE : DispatchSubmit
 
-ClientTTE -> ClientTTE : десериализация
 ClientTTE -> Client : метаданные
 Client -> ExpertTask : создать задачу
 activate ExpertTask
-ExpertTask -> ExpertTask : дескрипторы буферов
 ExpertTask -> ClientTTE : read batch
 HostTTE --> ClientTTE : чтение данных
 ClientTTE --> ExpertTask : чтение данных
-ExpertTask -> ExpertTask : экспертные вычисления
+ExpertTask -> ExpertTask : экспертные\nвычисления
 ExpertTask -> ClientTTE : write batch
 ClientTTE --> HostTTE : запись данных
-ExpertTask -> ClientTTE : HostOutputBufferUnlocked
-ClientTTE -> ClientTTE : сериализация
+ExpertTask -> ClientTTE : HostOutputBuffer\nUnlocked
 deactivate ExpertTask
 
-ClientTTE -> HostTTE : HostOutputBufferUnlocked
-HostTTE -> HostTTE : десериализация
-HostTTE -> Server : HostOutputBufferUnlocked
+ClientTTE -> HostTTE : HostOutputBuffer\nUnlocked
+HostTTE -> Server : HostOutputBuffer\nUnlocked
 Server -> HostTask : combine()
 deactivate HostTask
 
